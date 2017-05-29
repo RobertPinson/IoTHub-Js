@@ -31,8 +31,20 @@
             // Once a connection has been made, make a subscription and send a message.
             console.log("onConnect");
             client.subscribe("devices/web01/messages/devicebound/#");
-            message = new Paho.MQTT.Message("Hello CloudMQTT");
-            message.destinationName = "devices/web01/messages/events/";
+            var msg = {
+                "bat": "45",
+                "sig": "20"
+            };
+
+            var data = JSON.stringify(msg);
+            console.log(data);
+            message = new Paho.MQTT.Message(data);
+
+            var props = "messageType=critical";
+            var properties = encodeURIComponent();
+
+            message.destinationName = "devices/web01/messages/events/?para=test&messageType=normal";
+
             client.send(message);
         }
 
