@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MQTT js Azure Iot client</title>
+</head>
+
+<body>
+    <script src="resources/mqttws31.js"></script>
+    <script type="text/javascript">
+        // Create a client instance
+        client = new Paho.MQTT.Client("youshophub-dev.azure-devices.net", 443, "/$iothub/websocket?iothub-no-client-cert=true", "web01");
+        //Example client = new Paho.MQTT.Client("m11.cloudmqtt.com", 32903, "web_" + parseInt(Math.random() * 100, 10));
+
+        // set callback handlers
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+        var options = {
+            useSSL: true,
+            userName: "youshophub-dev.azure-devices.net/web01/api-version=2016-11-14",
+            password: "SharedAccessSignature sr=youshophub-dev.azure-devices.net%2Fdevices%2Fweb01&sig=VeQhYB5NfQoHnJ9G1fS9VTj3Ry9StQ7mcSdj1Nj%2Fdic%3D&se=1521938162",
+            onSuccess: onConnect,
+            onFailure: doFail
+        }
+
+        // connect the client
+        client.connect(options);
+
+        // called when the client connects
+        function onConnect() {
+            // Once a connection has been made, make a subscription and send a message.
+            console.log("onConnect");
+            client.subscribe("devices/web01/messages/devicebound/#");
+            message = new Paho.MQTT.Message("Hello CloudMQTT");
+            message.destinationName = "devices/web01/messages/events/";
+            client.send(message);
+        }
+
+        function doFail(e) {
+            console.log(e);
+        }
+
+        // called when the client loses its connection
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("onConnectionLost:" + responseObject.errorMessage);
+            }
+        }
+
+        // called when a message arrives
+        function onMessageArrived(message) {
+            console.log("onMessageArrived:" + message.payloadString);
+        }
+    </script>
+</body>
+
+</html>
