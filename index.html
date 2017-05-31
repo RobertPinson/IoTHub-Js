@@ -15,7 +15,7 @@
     <div class="connectionContainer">
         <h3>Connection Status:</h3>
         <textarea cols="80" rows="16" id="connectionConsole"></textarea>
-    </div>   
+    </div>
     <div id="receivedMsgContainer">
         <h3>Received Messages:</h3>
         <textarea cols="80" rows="16" id="receivedConsole"></textarea>
@@ -25,6 +25,15 @@
     <script src="resources/mqttws31.js"></script>
     <script src="resources/ebapi-modules.js"></script>
     <script type="text/javascript">
+        //var cradleProps = EB.SmartCradle.getAllProperties();
+        //logConnectionStatus("CRADLE Properties: " + JSON.stringify(cradleProps));
+
+        var uuid = EB.System.getProperty("uuid");
+        logConnectionStatus("SYSTEM Properties uuid: " + uuid);
+
+        //Create or return existing IoT device
+
+
         // Create a client instance
         client = new Paho.MQTT.Client("youshophub-dev.azure-devices.net", 443, "/$iothub/websocket?iothub-no-client-cert=true", "web01");
         //Example client = new Paho.MQTT.Client("m11.cloudmqtt.com", 32903, "web_" + parseInt(Math.random() * 100, 10));
@@ -50,6 +59,9 @@
 
             logConnectionStatus("Connected!");
 
+            //var uuid = EM.System.getProperty("uuid");
+            //logConnectionStatus("UUID: " + uuid);
+
             client.subscribe("devices/web01/messages/devicebound/#");
         }
 
@@ -61,7 +73,7 @@
         // called when the client loses its connection
         function onConnectionLost(responseObject) {
             if (responseObject.errorCode !== 0) {
-                console.log("onConnectionLost:" + responseObject.errorMessage);                
+                console.log("onConnectionLost:" + responseObject.errorMessage);
             }
 
             logConnectionStatus("Disconnected!");
@@ -70,17 +82,18 @@
         // called when a message arrives
         function onMessageArrived(message) {
             logReceived(message.payloadString);
-            EB.SmartCradle.flashLed({ledOnDuration: 1000, ledOffDuration: 500, smoothingEffect: true, ledFlashCount: 20}, function(){
-                EB.SmartCradle.unlock(50, 50, 10, function(){alert("device unlocked");})
-            });            
+            EB.SmartCradle.flashLed({ ledOnDuration: 1000, ledOffDuration: 500, smoothingEffect: true, ledFlashCount: 20 }, function () {
+                setTimeout(function () { EB.SmartCradle.unlock(50, 50, 10, function () { alert("device unlocked"); }) }, 5000);
+            });
         }
 
-        function onSendTelemetry(){
+        function onSendTelemetry() {
             sendTelemetry();
         }
 
-        function sendTememetry(){
-             var msg = {
+        function sendTememetry() {
+            var msg = {
+                "deviceId": "web01",
                 "bat": "45",
                 "sig": "20"
             };
@@ -97,7 +110,7 @@
             client.send(message);
         }
 
-        function logConnectionStatus(line){
+        function logConnectionStatus(line) {
             console.log("Connection Status: " + line);
             var textarea = document.getElementById('connectionConsole');
             previous_text = textarea.innerHTML;
@@ -111,6 +124,26 @@
             previous_text = textarea.innerHTML;
             textarea.innerHTML = previous_text + line + "\n";
             textarea.scrollTop = textarea.scrollHeight;
+        }
+
+        var getToken = function (iotHubName, key, keyName) {
+            var expiry = Math.floor(new Date().getTime() / 1000) + 3600 * 24; // 24 h expiry
+
+            var uri = iotHubName + ".azure-devices.net";
+
+            var hmacer = new jsSHA("SHA-256", "TEXT"); // This is from https://github.com/Caligatio/jsSHA/releases/tag/v2.0.1
+            hmacer.setHMACKey(key, "B64");
+            hmacer.update(encodeURIComponent(uri) + "\n" + expiry);
+
+            var sig = hmacer.getHMAC("B64");
+
+            var token = "SharedAccessSignature sig=" + encodeURIComponent(sig) + "&se=" + expiry + "&sr=" + uri;
+
+            if (keyName) {
+                token += "&skn=" + keyName;
+            }
+
+            return token;
         }
     </script>
 </body>
