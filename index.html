@@ -3,10 +3,27 @@
 
 <head>
     <title>MQTT js Azure Iot client</title>
+    <style>
+        button {
+            width: 100px;
+            height: 50px;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="connectionContainer">
+        <h3>Connection Status:</h3>
+        <textarea cols="80" rows="16" id="connectionConsole"></textarea>
+    </div>   
+    <div id="receivedMsgContainer">
+        <h3>Received Messages:</h3>
+        <textarea cols="80" rows="16" id="receivedConsole"></textarea>
+    </div>
+
+    <button id="telemetrySend" onclick="sendTememetry()">Send Telemetry</button>
     <script src="resources/mqttws31.js"></script>
+    <script src="resources/ebapi-modules.js"></script>
     <script type="text/javascript">
         // Create a client instance
         client = new Paho.MQTT.Client("youshophub-dev.azure-devices.net", 443, "/$iothub/websocket?iothub-no-client-cert=true", "web01");
@@ -30,8 +47,40 @@
         function onConnect() {
             // Once a connection has been made, make a subscription and send a message.
             console.log("onConnect");
+
+            logConnectionStatus("Connected!");
+
             client.subscribe("devices/web01/messages/devicebound/#");
-            var msg = {
+        }
+
+        function doFail(e) {
+            console.log(e);
+            logConnectionStatus("Failed to connect!");
+        }
+
+        // called when the client loses its connection
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("onConnectionLost:" + responseObject.errorMessage);                
+            }
+
+            logConnectionStatus("Disconnected!");
+        }
+
+        // called when a message arrives
+        function onMessageArrived(message) {
+            logReceived(message.payloadString);
+            EB.SmartCradle.flashLed({ledOnDuration: 1000, ledOffDuration: 500, smoothingEffect: true, ledFlashCount: 20}, function(){
+                EB.SmartCradle.unlock(50, 50, 10, function(){alert("device unlocked");})
+            });            
+        }
+
+        function onSendTelemetry(){
+            sendTelemetry();
+        }
+
+        function sendTememetry(){
+             var msg = {
                 "bat": "45",
                 "sig": "20"
             };
@@ -48,20 +97,20 @@
             client.send(message);
         }
 
-        function doFail(e) {
-            console.log(e);
+        function logConnectionStatus(line){
+            console.log("Connection Status: " + line);
+            var textarea = document.getElementById('connectionConsole');
+            previous_text = textarea.innerHTML;
+            textarea.innerHTML = previous_text + line + "\n";
+            textarea.scrollTop = textarea.scrollHeight;
         }
 
-        // called when the client loses its connection
-        function onConnectionLost(responseObject) {
-            if (responseObject.errorCode !== 0) {
-                console.log("onConnectionLost:" + responseObject.errorMessage);
-            }
-        }
-
-        // called when a message arrives
-        function onMessageArrived(message) {
-            console.log("onMessageArrived:" + message.payloadString);
+        function logReceived(line) {
+            console.log(line);
+            var textarea = document.getElementById('receivedConsole');
+            previous_text = textarea.innerHTML;
+            textarea.innerHTML = previous_text + line + "\n";
+            textarea.scrollTop = textarea.scrollHeight;
         }
     </script>
 </body>
